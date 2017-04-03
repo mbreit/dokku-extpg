@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+export PLUGIN_DATA_ROOT="/var/lib/dokku/services/extpg"

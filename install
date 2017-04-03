@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config"
+
+plugin-install() {
+    mkdir -p "$PLUGIN_DATA_ROOT"
+    chown dokku:dokku "$PLUGIN_DATA_ROOT"
+    chmod 0700 "$PLUGIN_DATA_ROOT"
+}
+
+plugin-install "$@"

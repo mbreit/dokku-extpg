@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")/functions"
+
+extpg_create_cmd() {
+    local cmd="extpg:create"
+    local argv=("$@")
+    [[ ${argv[0]} == "$cmd" ]] && shift 1
+    set -- $cmd $@
+
+    local cluster="default"
+    local db="$2"
+
+    extpg_create "$cluster" "$db"
+}
+
+extpg_create_cmd "$@"

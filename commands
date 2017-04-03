@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+extpg_help_content_func() {
+    declare desc="return extpg plugin help content"
+    cat<<help_content
+    extpg:create <name>, Create a new database with user and password
+    extpg:connect <database>, Start a psql session
+    extpg:dump <database>
+    extpg:link <app> <database>
+    extpg:run <database> <sql query>
+    extpg:setup <app>
+help_content
+}
+
+case "$1" in
+  help | extpg:help)
+    if [[ $1 = "extpg:help" ]] ; then
+        echo -e 'Usage: dokku extpg[:COMMAND]'
+        echo ''
+        echo 'Manage external Postgres databases'
+        echo ''
+        echo 'Additional commands:'
+        extpg_help_content_func | column -c2 -t -s,
+    elif [[ $(ps -o command= $PPID) == *"--all"* ]]; then
+        extpg_help_content_func
+    else
+        cat<<help_desc
+extpg, manage external Postgres databases
+help_desc
+    fi
+    ;;
+
+  *)
+    exit "$DOKKU_NOT_IMPLEMENTED_EXIT"
+    ;;
+
+esac

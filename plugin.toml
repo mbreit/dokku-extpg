@@ -1,0 +1,4 @@
+[plugin]
+description = "Manage an external Postgres database"
+version = "0.0.1"
+[plugin.config]

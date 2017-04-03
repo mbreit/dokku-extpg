@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config"
+source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
+source "$PLUGIN_AVAILABLE_PATH/config/functions"
+
+extpg_config_value() {
+    cat "$PLUGIN_DATA_ROOT/$1/$2"
+}
+
+extpg_psql() {
+    psql $@
+}
+
+extpg_with_cluster() {
+    local cluster="$1"; shift 1
+    PG_CLUSTER_NAME="$cluster" PGHOST="$(extpg_config_value "$cluster" "HOST")" PGPORT="$(extpg_config_value "$cluster" "PORT")" "$@"
+}
+
+extpg_with_admin() {
+    PGDATABASE="postgres" PGUSER="$(extpg_config_value "$PG_CLUSTER_NAME" "USERNAME")" PGPASSWORD="$(extpg_config_value "$PG_CLUSTER_NAME" "PASSWORD")" "$@"
+}
+
+extpg_with_database() {
+    local db="$1"; shift 1
+    PGDATABASE="$db" PGUSER="$(extpg_config_value "$PG_CLUSTER_NAME/$db" "USERNAME")" PGPASSWORD="$(extpg_config_value "$PG_CLUSTER_NAME/$db" "PASSWORD")" "$@"
+}
+
+extpg_database_url() {
+    extpg_with_cluster "$1" extpg_with_database "$2" bash -c "echo postgres://\$PGUSER:\$PGPASSWORD@\$PGHOST:\$PGPORT/\$PGDATABASE"
+}
+
+extpg_admin_sql() {
+    extpg_with_cluster "$1" extpg_with_admin psql -c "$2"
+}
+
+extpg_sql() {
+    extpg_with_cluster "$1" extpg_with_database "$2" psql -c "$3"
+}
+
+extpg_psql() {
+    extpg_with_cluster "$1" extpg_with_database "$2" psql
+}
+
+extpg_pg_dump() {
+    extpg_with_cluster "$1" extpg_with_database "$2" pg_dump
+}
+
+extpg_link() {
+  local cluster="$1"
+  local database="$2"
+  local app="$3"
+
+  local DATABASE_URL=$(extpg_database_url $cluster $database $app)
+  config_set "$app" "DATABASE_URL=$DATABASE_URL"
+}
+
+extpg_create() {
+    local cluster="$1"
+    local db="$2"
+
+    local dbuser="$db"
+    local password="$(openssl rand -hex 16)"
+    local db_dir="$PLUGIN_DATA_ROOT/$cluster/$db"
+
+    mkdir "$db_dir"
+    echo -n "$dbuser" > "$db_dir/USERNAME"
+    echo -n "$password" > "$db_dir/PASSWORD"
+    extpg_admin_sql "$cluster" "CREATE ROLE $dbuser WITH LOGIN PASSWORD '$password';"
+    extpg_admin_sql "$cluster" "CREATE DATABASE $db OWNER $dbuser;"
+}
