@@ -16,7 +16,7 @@ extpg_setup_cmd() {
     local app="$2";  verify_app_name "$2"
     local cluster="default"
 
-    local db="$app"
+    local db="${app/-/_}"
 
     extpg_create "$cluster" "$db"
     extpg_link "$cluster" "$db" "$app"
